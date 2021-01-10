@@ -5,6 +5,9 @@
 - Mysql
 - Jsoup, Komoran
 
+# 담당 구현 내용
+https://drive.google.com/file/d/1fXDr6XCBjSVoaFuTJq-uf_F2ejE5XCnQ/view?usp=sharing
+
 # BPMN
 ![](https://user-images.githubusercontent.com/26542094/95868107-de482600-0da4-11eb-90b7-20d676ebbc8b.png)
 
