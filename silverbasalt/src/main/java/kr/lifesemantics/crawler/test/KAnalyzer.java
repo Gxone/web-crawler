@@ -31,72 +31,20 @@ import kr.lifesemantics.crawler.domain.ArticleDto;
 public class KAnalyzer {
 	List<String> titleList = new LinkedList<String>();
 	List<String> contentList = new LinkedList<String>();
-	
-	public void extractNoun1() {
-		KomoranResult analyzeTList;
-		KomoranResult analyzeCList;
-		// 분석 대상 text에서 명사만 추출한 List
-		List<String> analyzeTResultList;
-		List<String> analyzeCResultList;
-		Komoran komoran = new Komoran(DEFAULT_MODEL.FULL);
-		
-		for (int idx = 1; idx <= 100; idx++) {
-			Map<String, Integer> weight = new HashMap<String, Integer>();
-			selectDB(idx);
-			// 분석할 문장
-			String titleToAnalyze = titleList.get(idx-1);
-			String contentToAnalyze = contentList.get(idx-1);
-			// analyze()
-			analyzeTList = komoran.analyze(titleToAnalyze);
-			analyzeCList = komoran.analyze(contentToAnalyze);
-			analyzeTResultList = analyzeTList.getNouns();
-			analyzeCResultList = analyzeCList.getNouns();
-			
-			for (int i = 0; i < analyzeCResultList.size(); i++) {
-				weight.put(analyzeCResultList.get(i), 0);
-			}
-			for (int i = 0; i < analyzeTResultList.size(); i++) {
-				weight.put(analyzeTResultList.get(i), 0);
-			}
-			
-			// content에 있는 단어일 경우 가중치 +1
-			for (Entry<String, Integer> entry : weight.entrySet()) {
-				for (int n = 0; n < analyzeCResultList.size(); n++) {
-					if (entry.getKey().equals(analyzeCResultList.get(n))) {
-						int temp = entry.getValue();
-						temp += 1;
-						entry.setValue(temp);
-					}
-				}
-			}
-			// title에 있는 단어일 경우 가중치 +2
-			for (Entry<String, Integer> entry : weight.entrySet()) {
-				for (int n = 0; n < analyzeTResultList.size(); n++) {
-					if (entry.getKey().equals(analyzeTResultList.get(n))) {
-						int temp = entry.getValue();
-						temp += 2;
-						entry.setValue(temp);
-					}
-				}
-			}
-			rankTags(idx, weight);
-			System.out.println("idx : " + idx);
-		}
-	}
-	
-	public void extractNounByJay() {
 
+	public void extractNoun() {
 		Komoran komoran = new Komoran(DEFAULT_MODEL.FULL);
 		
 		for (int idx = 1; idx <= 100; idx++) {
-			List<ArticleDto> articleDtos = selectDBByJay(idx);
+			List<ArticleDto> articleDtos = selectDB(idx);
 			for(ArticleDto articleDto : articleDtos) {
 				String title = articleDto.getTitle();
 				String content = articleDto.getContent();
 				
 				KomoranResult titleResults = komoran.analyze(title);
 				KomoranResult contentResults = komoran.analyze(content);
-				
+
+				// 기사의 제목과 내용에서 각각 명사 추출
 				List<String> titleResultNouns = titleResults.getNouns();
 				List<String> contentResultNouns = contentResults.getNouns();
 				
@@ -116,7 +64,7 @@ public class KAnalyzer {
 					weightMap.put(contentNoun, weight);
 				}
 				rankTags(idx, weightMap);
-//				System.out.println(idx + " >> " + weightMap.toString());
+				// System.out.println(idx + " >> " + weightMap.toString());
 			}
 		}
 	}
@@ -142,12 +90,12 @@ public class KAnalyzer {
         Collection<Integer> v = sortedTempMap.values();
         Iterator<Integer> itrv = v.iterator();
        
-        insertDBByJay(idx, sortedTempMap);
+        insertDB(idx, sortedTempMap);
 	}
 	
-	public void insertDBByJay(int articleIdx, Map<String, Integer> map) {
-		
+	public void insertDB(int articleIdx, Map<String, Integer> map) {
 		int idx = 0;
+
 		for(Entry<String, Integer> entry : map.entrySet()) {
 			String tag = entry.getKey();
 			Integer weight = entry.getValue();
@@ -165,7 +113,6 @@ public class KAnalyzer {
 				pstmt.addBatch();
 				pstmt.executeBatch();
 				conn.close();
-
 			} catch (SQLException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -173,45 +120,16 @@ public class KAnalyzer {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
 			idx++;
 			if(idx == 5) {
 				break;
 			}
 		}
-		
-	}
-	
-	public void insertDB (int idx, Iterator<String> tags, Iterator<Integer> values) {
-		 List<String> topTags = new LinkedList<String>();
-	     List<Integer> topWeight = new LinkedList<Integer>();
-        // 5개 
-        int rmt = 0;
-        	while(tags.hasNext()){
-        		if(rmt == 5) {
-        			break;
-        		}
-        		rmt++;
-        		String tag = (String) tags.next();
-        		topTags.add(tag);
-//        		System.out.println("top" + rmt + " Tag : "+tag);
-        }
-        	rmt = 0;
-        	while(values.hasNext()){
-        		if(rmt == 5) {
-        			break;
-        		}
-        		rmt++;
-        		Integer weight = (Integer) values.next();
-        		topWeight.add(weight);
-//        		System.out.println("weight : "+weight);
-        }
-        	System.out.println(topTags + ", " + topWeight);
-        	insertTag(idx, topTags,topWeight);	
 	}
 	
 	public void insertTag(int idx, List<String> tags, List<Integer> weights) {
 		PreparedStatement pstmt = null;
+
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
 			Connection conn = DriverManager.getConnection("jdbc:mysql://172.16.0.21:3306/SilverBasalt?useSSL=false", "lifesemantics", "forhealth!");// SSL 誘몄궗�슜 寃쎄퀬 -> ?useSSL=false 異붽�
@@ -227,41 +145,18 @@ public class KAnalyzer {
 			pstmt.addBatch();
 			pstmt.executeBatch();
 			conn.close();
-
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-
-	public void selectDB(int idx) {
-		PreparedStatement pstmt = null;
-		try {
-			Class.forName("com.mysql.jdbc.Driver");
-			Connection conn = DriverManager.getConnection("jdbc:mysql://172.16.0.21:3306/SilverBasalt?useSSL=false", "lifesemantics", "forhealth!");
-			String sql = "SELECT title, content FROM article WHERE idx = " + idx;
-			Statement st = conn.createStatement();
-			ResultSet rs = st.executeQuery(sql);
-			while(rs.next()) {
-				titleList.add(idx-1, rs.getString(1));
-				contentList.add(idx-1, rs.getString(2));
-			}
-			conn.close();
-		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
-	public List<ArticleDto> selectDBByJay(int idx) {
-		
+	public List<ArticleDto> selectDB(int idx) {
 		List<ArticleDto> articleDtos = new LinkedList<>();
+
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
 			Connection conn = DriverManager.getConnection("jdbc:mysql://172.16.0.21:3306/SilverBasalt?useSSL=false", "lifesemantics", "forhealth!");
@@ -269,8 +164,8 @@ public class KAnalyzer {
 			Statement st = conn.createStatement();
 			ResultSet rs = st.executeQuery(sql);
 			while(rs.next()) {
-//				titleList.add(idx-1, rs.getString(1));
-//				contentList.add(idx-1, rs.getString(2));
+				// titleList.add(idx-1, rs.getString(1));
+				// contentList.add(idx-1, rs.getString(2));
 				ArticleDto articleDto = new ArticleDto();
 				articleDto.setIdx(rs.getInt(1));
 				articleDto.setTitle(rs.getString(2));
@@ -285,8 +180,6 @@ public class KAnalyzer {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
 		return articleDtos;
 	}
 }
-
