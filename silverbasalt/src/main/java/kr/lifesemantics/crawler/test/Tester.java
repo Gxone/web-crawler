@@ -177,11 +177,8 @@ public class Tester4 {
 //		System.out.println("url 가져오기 : " + (t2 - t1));
 //		System.out.println("Dto 생성 후 저장 : " + (t3 - t2));
 //		System.out.println("총 시간 : " + (t3 - t1));
-//		
+
 		KAnalyzer kAnalyzer = new KAnalyzer();
-//		kAnalyzer.extractNoun();
-		kAnalyzer.extractNounByJay();
-		
+		kAnalyzer.extractNoun();
 	}
-	
 }
