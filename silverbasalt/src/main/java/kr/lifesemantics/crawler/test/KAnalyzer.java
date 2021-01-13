@@ -23,8 +23,8 @@ import kr.co.shineware.nlp.komoran.model.KomoranResult;
 import kr.lifesemantics.crawler.domain.ArticleDto;
 
 /**
- * 
- * 
+ *
+ *
  * @author LS-COM-00044(jw.ko@lifesemantics.kr)
  *
  */
@@ -34,21 +34,23 @@ public class KAnalyzer {
 
 	public void extractNoun() {
 		Komoran komoran = new Komoran(DEFAULT_MODEL.FULL);
-		
+
 		for (int idx = 1; idx <= 100; idx++) {
 			List<ArticleDto> articleDtos = selectDB(idx);
 			for(ArticleDto articleDto : articleDtos) {
 				String title = articleDto.getTitle();
 				String content = articleDto.getContent();
-				
+
 				KomoranResult titleResults = komoran.analyze(title);
 				KomoranResult contentResults = komoran.analyze(content);
 
 				// 기사의 제목과 내용에서 각각 명사 추출
 				List<String> titleResultNouns = titleResults.getNouns();
 				List<String> contentResultNouns = contentResults.getNouns();
-				
+
 				Map<String, Integer> weightMap = new HashMap<String, Integer>();
+
+				// 제목에 있을 경우 가중치 +2
 				for(String titleNoun : titleResultNouns) {
 					int weight = 2;
 					if(weightMap.containsKey(titleNoun)) {
@@ -56,6 +58,7 @@ public class KAnalyzer {
 					}
 					weightMap.put(titleNoun, weight);
 				}
+				// 내용에 있을 경우 가중치 +1
 				for(String contentNoun : contentResultNouns) {
 					int weight = 1;
 					if(weightMap.containsKey(contentNoun)) {
@@ -68,39 +71,41 @@ public class KAnalyzer {
 			}
 		}
 	}
-	
+
 	public void rankTags(int idx, final Map<String, Integer> map) {
 		List<Map.Entry<String, Integer>> list = new LinkedList<Map.Entry<String, Integer>>(map.entrySet());
-        Collections.sort(list, new Comparator<Map.Entry<String, Integer>>() {
-            public int compare(Map.Entry<String, Integer> o1, Map.Entry<String, Integer> o2) {
-                int comparision = (o1.getValue() - o2.getValue()) * -1;
-                return comparision == 0 ? o1.getKey().compareTo(o2.getKey()) : comparision;
-            }
-        });
-        // 순서유지를 위해 LinkedHashMap을 사용
-        Map<String, Integer> sortedTempMap = new LinkedHashMap<String, Integer>(); 
-        for(Iterator<Map.Entry<String, Integer>> iter = list.iterator(); iter.hasNext();){
-            Map.Entry<String, Integer> entry = iter.next();
-            sortedTempMap.put(entry.getKey(), entry.getValue());
-        }
-        System.out.println(idx + " >> "  + sortedTempMap);
-        
-        Collection<String> k = sortedTempMap.keySet();
-        Iterator<String> itr = k.iterator();
-        Collection<Integer> v = sortedTempMap.values();
-        Iterator<Integer> itrv = v.iterator();
-       
-        insertDB(idx, sortedTempMap);
+
+		Collections.sort(list, new Comparator<Map.Entry<String, Integer>>() {
+			public int compare(Map.Entry<String, Integer> o1, Map.Entry<String, Integer> o2) {
+				int comparision = (o1.getValue() - o2.getValue()) * -1;
+				return comparision == 0 ? o1.getKey().compareTo(o2.getKey()) : comparision;
+			}
+		});
+
+		// 순서유지를 위해 LinkedHashMap을 사용
+		Map<String, Integer> sortedTempMap = new LinkedHashMap<String, Integer>();
+		for(Iterator<Map.Entry<String, Integer>> iter = list.iterator(); iter.hasNext();){
+			Map.Entry<String, Integer> entry = iter.next();
+			sortedTempMap.put(entry.getKey(), entry.getValue());
+		}
+		// System.out.println(idx + " >> "  + sortedTempMap);
+
+		Collection<String> k = sortedTempMap.keySet();
+		Iterator<String> itr = k.iterator();
+		Collection<Integer> v = sortedTempMap.values();
+		Iterator<Integer> itrv = v.iterator();
+
+		insertDB(idx, sortedTempMap);
 	}
-	
+
 	public void insertDB(int articleIdx, Map<String, Integer> map) {
 		int idx = 0;
 
 		for(Entry<String, Integer> entry : map.entrySet()) {
 			String tag = entry.getKey();
 			Integer weight = entry.getValue();
-			
-			// INSERT TAG2 
+
+			// INSERT TAG2
 			PreparedStatement pstmt = null;
 			try {
 				Class.forName("com.mysql.jdbc.Driver");
@@ -124,33 +129,6 @@ public class KAnalyzer {
 			if(idx == 5) {
 				break;
 			}
-		}
-	}
-	
-	public void insertTag(int idx, List<String> tags, List<Integer> weights) {
-		PreparedStatement pstmt = null;
-
-		try {
-			Class.forName("com.mysql.jdbc.Driver");
-			Connection conn = DriverManager.getConnection("jdbc:mysql://172.16.0.21:3306/SilverBasalt?useSSL=false", "lifesemantics", "forhealth!");// SSL 誘몄궗�슜 寃쎄퀬 -> ?useSSL=false 異붽�
-			String sql = "INSERT INTO tags(tag1, tag2, tag3, tag4, tag5, tag1_weight, tag2_weight, tag3_weight, tag4_weight, tag5_weight, idx) VALUES(?,?,?,?,?,?,?,?,?,?,?)";
-			pstmt = conn.prepareStatement(sql);
-			for(int i = 0; i < tags.size(); i++) {
-				pstmt.setString(i+1, tags.get(i));
-			}
-			for(int i = 0; i < weights.size(); i++) {
-				pstmt.setInt(i+6, weights.get(i));
-			}	
-			pstmt.setInt(11, idx);
-			pstmt.addBatch();
-			pstmt.executeBatch();
-			conn.close();
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 	}
 	
